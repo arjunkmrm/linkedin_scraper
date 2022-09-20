@@ -10,7 +10,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 ```
 
-```{r}
+```{r, echo=FALSE}
 #laod libraries
 library(igraph)
 library(tidyverse)
@@ -18,12 +18,12 @@ library(quanteda)
 library(visNetwork)
 ```
 
-```{r}
+```{r, echo=FALSE}
 
-roles_df = read.csv('sustainability_roles.csv')
-head(roles_df)
-names(roles_df)
 
+roles_network <- function(sector, coocterm, ncoocs){
+setwd("~/Documents/GitHub/linkedin_scraper")
+roles_df = read.csv(paste(sector, "_roles.csv", sep = ""))
 roles_corp = corpus(roles_df, text_field = 'role')
 summary(roles_corp, 5)
 
@@ -37,13 +37,12 @@ roles_toks = tokens(roles_corp,
 roles_toks %>% head()
 roles_toks = roles_toks %>% tokens_remove(c(stopwords("english"), 'standard', "chartered", "bnp", "paribas", "jpmorgan", "chase", "j.p",
                                             "CO", "w", "I", "morgan",
-                                            "bnpp", "jp"))
+                                            "bnpp", "jp", "citi", "hsbc",
+                                            "microsoft", "google",
+                                            "amazon", "apple", "meta",
+                                            "aws"))
 
 roles_toks = roles_toks %>% tokens_replace("manager-", "manager")
-
-roles_toks
-```
-```{r}
 
 min_freq <- 5
 
@@ -57,29 +56,21 @@ roles_dfm
 roles_cc = t(roles_dfm) %*% roles_dfm
 roles_cc[1:5, 1:5]
 
-cooct <- "sustainability"
+cooct <- coocterm
 k <- nrow(roles_dfm)
 ki <- sum(roles_dfm[, cooct])
 kj <- colSums(roles_dfm)
 names(kj) <- colnames(roles_dfm)
 kij <- roles_cc[cooct, ]
 
-```
-
-```{r}
-
 # Read in the source code for the co-occurrence calculation
 source("calcCoocStats.R")
-ncoocs <- 13
-cooct <- "sustainability"
+#ncoocs
+#cooct <- cterm
 
 coocs <- calcCoocStats(cooct, roles_dfm, measure="DICE")
 # Display the ncoocs main terms
-print(coocs[1:ncoocs])
-
-```
-
-```{r}
+#print(coocs[1:ncoocs])
 
 resultGraph <- data.frame(from = character(), to = character(), sig = numeric(0))
 
@@ -106,7 +97,7 @@ for (i in 1:ncoocs){
   coocs2 <- calcCoocStats(newcooct, roles_dfm, measure="DICE")
   
   #print the co-occurrences
-  coocs2[1:10]
+  #coocs2[1:10]
   
   # Structure of the temporary graph object
   tmpGraph <- data.frame(from = character(), to = character(), sig = numeric(0))
@@ -119,16 +110,6 @@ for (i in 1:ncoocs){
   resultGraph <- rbind(resultGraph, tmpGraph[2:length(tmpGraph[, 1]), ])
 }
 
-```
-
-
-```{r}
-
-#resultGraph %>% filter(to == "sustainability")
-
-```
-
-```{r, fig.width=8, fig.height=8}
 
 # set seed for graph plot
 set.seed(1)
@@ -142,10 +123,11 @@ verticesToRemove <- V(graphNetwork)[degree(graphNetwork) < 3]
 graphNetwork <- delete.vertices(graphNetwork, verticesToRemove) 
 
 # Assign colors to nodes (search term blue, others orange)
-V(graphNetwork)$color <- ifelse(V(graphNetwork)$name == cooct, 'cornflowerblue', 'orange') 
+V(graphNetwork)$color <- adjustcolor(ifelse(V(graphNetwork)$name == cooct, 'darkgreen', 'grey'), alpha.f = .5) 
+
 
 # Set edge colors
-E(graphNetwork)$color <- adjustcolor("DarkGray", alpha.f = .5)
+E(graphNetwork)$color <- adjustcolor("DarkGray", alpha.f = .4)
 # scale significance between 1 and 10 for edge width
 E(graphNetwork)$width <- scales::rescale(E(graphNetwork)$sig, to = c(1, 10))
 
@@ -161,33 +143,76 @@ par(mai=c(0,0,1,0))
 plot(
   graphNetwork,             
   layout = layout.fruchterman.reingold, # Force Directed Layout 
-  main = paste(cooct, ' graph'),
+  main = paste(cooct, 'graph'),
   vertex.label.family = "sans",
   vertex.label.cex = 0.8,
   vertex.shape = "circle",
-  vertex.label.dist = 0.5,          # Labels of the nodes moved slightly
-  vertex.frame.color = adjustcolor("black", alpha.f = .5),
+  vertex.label.dist = 0,          # Labels of the nodes moved slightly
+  vertex.label.degree=pi/2,
+  vertex.frame.color = adjustcolor("white", alpha.f = .2),
   vertex.label.color = 'black',     # Color of node names
   vertex.label.font = 2,            # Font of node names
   vertex.label = V(graphNetwork)$name,      # node names
-  vertex.label.cex = 1 # font size of node names
+  vertex.label.cex = 2 # font size of node names
 )
-```
 
+coocs_df = data.frame(coocs)
+colnames(coocs_df)[1] = 'dice'
+return(coocs_df)
 
-```{r}
+}
 
-#visIgraph(graphNetwork)
-
-
-
-
-
+#return dataframe too
 
 ```
 
+```{r, fig.height=10, fig.width=10, echo=FALSE}
 
 
-      
+bankcoocs_df = roles_network('bank', 'lead', 15)
+#bankcoocs_df = roles_network('bank', 'cloud', 5)
+bankcoocs_df = roles_network('bank', 'sustainability', 15)
+
+```
 
 
+```{r, fig.height=6, fig.width=12, echo=FALSE}
+bankcoocs_df['role'] = row.names(bankcoocs_df)
+print(head(bankcoocs_df, 20))
+
+head(bankcoocs_df, 20) %>% ggplot(aes(y = reorder(role, dice), x = dice)) +
+   geom_point(color = 'deepskyblue') +
+   geom_segment(aes(x = 0, y = role, xend = dice, yend = role)) +
+   xlab('dice coefficient') + ylab('sustainability roles')  +
+   ggtitle('Banks') + geom_text(aes(label = round(dice, 2)), hjust=-0.3, size = 3) +
+   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+         panel.background = element_blank(), axis.line.y = element_line('black')) + 
+  theme(axis.line.x = element_blank(), axis.ticks.x = element_blank(), axis.text.x = element_blank(), axis.text.y=element_text(size=12), axis.title=element_text(size=14))
+```
+
+
+
+```{r,fig.height=10, fig.width=10, echo=FALSE}
+
+techcoocs_df = roles_network('tech', 'lead', 15)
+techcoocs_df = roles_network('tech', 'cloud', 15)
+techcoocs_df = roles_network('tech', 'sustainability', 15)
+
+```
+
+
+```{r,fig.height=6, fig.width=12, echo=FALSE}
+techcoocs_df['role'] = row.names(techcoocs_df)
+print(head(techcoocs_df, 20))
+
+head(techcoocs_df, 20) %>% ggplot(aes(y = reorder(role, dice), x = dice)) +
+   geom_point(color = 'firebrick') +
+   geom_segment(aes(x = 0, y = role, xend = dice, yend = role)) +
+   xlab('dice coefficient') + ylab('sustainability roles')  +
+   ggtitle('Tech') + geom_text(aes(label = round(dice, 2)), hjust=-0.3, size = 3) +
+   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+         panel.background = element_blank(), axis.line.y = element_line('black')) + 
+  theme(axis.line.x = element_blank(), axis.ticks.x = element_blank(), axis.text.x = element_blank(), axis.text.y=element_text(size=12), axis.title=element_text(size=14))
+
+
+```
