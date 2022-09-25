@@ -40,7 +40,7 @@ roles_toks = roles_toks %>% tokens_remove(c(stopwords("english"), 'standard', "c
                                             "bnpp", "jp", "citi", "hsbc",
                                             "microsoft", "google",
                                             "amazon", "apple", "meta",
-                                            "aws"))
+                                            "aws", "dbs"))
 
 roles_toks = roles_toks %>% tokens_replace("manager-", "manager")
 
@@ -213,6 +213,17 @@ head(techcoocs_df, 20) %>% ggplot(aes(y = reorder(role, dice), x = dice)) +
    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
          panel.background = element_blank(), axis.line.y = element_line('black')) + 
   theme(axis.line.x = element_blank(), axis.ticks.x = element_blank(), axis.text.x = element_blank(), axis.text.y=element_text(size=12), axis.title=element_text(size=14))
+
+
+```
+
+
+
+```{r, fig.height=10, fig.width=10, echo=FALSE}
+
+dbscoocs_df = roles_network('dbs', 'sustainability', 15)
+#dbscoocs_df = roles_network('dbs', 'lead', 15)
+dbscoocs_df = roles_network('dbs', 'head', 15)
 
 
 ```
