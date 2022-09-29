@@ -1,6 +1,6 @@
 ---
 title: "Sustainability Roles"
-author: "Arjun Kumar"
+author: 
 output:
   pdf_document: default
   html_document: default
@@ -143,7 +143,7 @@ par(mai=c(0,0,1,0))
 plot(
   graphNetwork,             
   layout = layout.fruchterman.reingold, # Force Directed Layout 
-  main = paste(cooct, 'graph'),
+  #main = paste(cooct, 'graph'),
   vertex.label.family = "sans",
   vertex.label.cex = 0.8,
   vertex.shape = "circle",
@@ -156,29 +156,103 @@ plot(
   vertex.label.cex = 2 # font size of node names
 )
 
+
+
 coocs_df = data.frame(coocs)
 colnames(coocs_df)[1] = 'dice'
-return(coocs_df)
+
+network_list = list("graph" = graphNetwork, coocs_df)
+
+return(network_list)
 
 }
 
 #return dataframe too
+# color nodes that are different between other banks and dbs
+```
+
+
+
+## DBS
+
+```{r, fig.height=10, fig.width=10, echo=FALSE}
+
+dbs_list = roles_network('dbs', 'sustainability', 15)
+dbs_graph = dbs_list[[1]]
+dbscoocs_df = dbs_list[[2]]
+
+print('')
 
 ```
+```{r, fig.height=6, fig.width=12, echo=FALSE}
+dbscoocs_df['role'] = row.names(dbscoocs_df)
+#print(head(dbscoocs_df, 20))
+
+head(dbscoocs_df, 20) %>% ggplot(aes(y = reorder(role, dice), x = dice)) +
+   geom_point(color = 'deepskyblue') +
+   geom_segment(aes(x = 0, y = role, xend = dice, yend = role)) +
+   xlab('dice coefficient') + ylab('sustainability roles')  +
+   ggtitle('Banks') + geom_text(aes(label = round(dice, 2)), hjust=-0.3, size = 3) +
+   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+         panel.background = element_blank(), axis.line.y = element_line('black')) + 
+  theme(axis.line.x = element_blank(), axis.ticks.x = element_blank(), axis.text.x = element_blank(), axis.text.y=element_text(size=12), axis.title=element_text(size=14))
+```
+
+
+## Major banks
+### BNP Paribas, Citi, HSBC, Standard Chartered, JP Morgan
 
 ```{r, fig.height=10, fig.width=10, echo=FALSE}
 
 
-bankcoocs_df = roles_network('bank', 'lead', 15)
+#bankcoocs_df = roles_network('bank', 'lead', 15)
 #bankcoocs_df = roles_network('bank', 'cloud', 5)
-bankcoocs_df = roles_network('bank', 'sustainability', 15)
+bank_list = roles_network('bank', 'sustainability', 15)
+bank_graph = bank_list[[1]]
+bankcoocs_df = bank_list[[2]]
+
+
+```
+
+## Unique roles in other banks
+
+```{r, echo=FALSE}
+
+
+
+banknodes = V(bank_graph)$name
+dbsnodes = V(dbs_graph)$name
+
+bankcolr = setdiff(banknodes, dbsnodes)
+print(bankcolr)
+# Assign colors to nodes (search term blue, others orange)
+#V(bank_graph)$color <- adjustcolor(ifelse(as.character(V(bank_graph)$name) == bankcolr, 'orange', 'grey'), alpha.f = .5) 
+
+#V(bank_graph)
+
+# plot(
+#   bank_graph,
+#   layout = layout.fruchterman.reingold, # Force Directed Layout
+#   main = paste('sustainability', 'graph'),
+#   vertex.label.family = "sans",
+#   vertex.label.cex = 0.8,
+#   vertex.shape = "circle",
+#   vertex.label.dist = 0,          # Labels of the nodes moved slightly
+#   vertex.label.degree=pi/2,
+#   vertex.frame.color = adjustcolor("white", alpha.f = .2),
+#   vertex.label.color = 'black',     # Color of node names
+#   vertex.label.font = 2,            # Font of node names
+#   vertex.label = V(bank_graph)$name,      # node names
+#   vertex.label.cex = 2 # font size of node names
+# )
+
 
 ```
 
 
 ```{r, fig.height=6, fig.width=12, echo=FALSE}
 bankcoocs_df['role'] = row.names(bankcoocs_df)
-print(head(bankcoocs_df, 20))
+#print(head(bankcoocs_df, 20))
 
 head(bankcoocs_df, 20) %>% ggplot(aes(y = reorder(role, dice), x = dice)) +
    geom_point(color = 'deepskyblue') +
@@ -191,19 +265,33 @@ head(bankcoocs_df, 20) %>% ggplot(aes(y = reorder(role, dice), x = dice)) +
 ```
 
 
+## Major tech companies
+### Google, Microsoft, Amazon, Apple, Meta
+
 
 ```{r,fig.height=10, fig.width=10, echo=FALSE}
 
-techcoocs_df = roles_network('tech', 'lead', 15)
-techcoocs_df = roles_network('tech', 'cloud', 15)
-techcoocs_df = roles_network('tech', 'sustainability', 15)
+tech_list = roles_network('tech', 'sustainability', 15)
+tech_graph = tech_list[[1]]
+techcoocs_df = tech_list[[2]]
 
 ```
 
+## Unique roles in tech companies
+
+```{r, echo=FALSE}
+
+banknodes = V(bank_graph)$name
+technodes = V(tech_graph)$name
+
+techcolr = setdiff(technodes, banknodes)
+print(techcolr)
+
+```
 
 ```{r,fig.height=6, fig.width=12, echo=FALSE}
 techcoocs_df['role'] = row.names(techcoocs_df)
-print(head(techcoocs_df, 20))
+#print(head(techcoocs_df, 20))
 
 head(techcoocs_df, 20) %>% ggplot(aes(y = reorder(role, dice), x = dice)) +
    geom_point(color = 'firebrick') +
@@ -219,11 +307,3 @@ head(techcoocs_df, 20) %>% ggplot(aes(y = reorder(role, dice), x = dice)) +
 
 
 
-```{r, fig.height=10, fig.width=10, echo=FALSE}
-
-dbscoocs_df = roles_network('dbs', 'sustainability', 15)
-#dbscoocs_df = roles_network('dbs', 'lead', 15)
-dbscoocs_df = roles_network('dbs', 'head', 15)
-
-
-```
